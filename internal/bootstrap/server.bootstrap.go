@@ -5,6 +5,7 @@ import (
 	"net"
 	"time"
 
+	"github.com/gin-gonic/gin"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
 	"github.com/krobus00/websocket-service/internal/contract"
@@ -29,28 +30,25 @@ func StartServer() {
 
 	go Start(epollerService, websocketService)
 
-	ln, err := net.Listen("tcp", "0.0.0.0:8000")
-	if err != nil {
-		log.Fatal(err)
-	}
+	router := gin.Default()
 
-	u := ws.Upgrader{}
+	router.GET("/ws", func(c *gin.Context) {
+		conn, _, _, err := ws.UpgradeHTTP(c.Request, c.Writer)
+		if err != nil {
+			return
+		}
 
-	for {
-		// zero allocation upgrade
-		conn, err := ln.Accept()
-		if err != nil {
-			log.Fatal(err)
-		}
-		_, err = u.Upgrade(conn)
-		if err != nil {
-			log.Printf("upgrade error: %s", err)
-		}
+		conn.SetDeadline(time.Now().Add(timeout))
 		if err := epollerService.Add(conn); err != nil {
 			log.Printf("failed to add connection %v", err)
 			conn.Close()
 		}
+	})
+
+	if err := router.Run("0.0.0.0:8000"); err != nil {
+		log.Fatal(err)
 	}
+
 }
 
 func Start(epollerService contract.EpollerService, websocketService contract.WebsocketService) {
@@ -63,7 +61,6 @@ func Start(epollerService contract.EpollerService, websocketService contract.Web
 			if conn == nil {
 				break
 			}
-			conn.SetDeadline(time.Now().Add(timeout))
 
 			messageData, opCode, err := wsutil.ReadClientData(conn)
 			if err != nil {

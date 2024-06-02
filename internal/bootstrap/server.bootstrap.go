@@ -1,24 +1,21 @@
 package bootstrap
 
 import (
-	"log"
+	"fmt"
 	"net"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/krobus00/websocket-service/internal/config"
 	"github.com/krobus00/websocket-service/internal/contract"
 	epollerSvc "github.com/krobus00/websocket-service/internal/service/epoller"
 	websocketSvc "github.com/krobus00/websocket-service/internal/service/websocket"
-)
-
-const (
-	timeout = 5 * time.Second
+	"github.com/sirupsen/logrus"
 )
 
 func StartServer() {
-	var err error
 	epollerService, err := epollerSvc.New()
 	if err != nil {
 		panic(err)
@@ -35,18 +32,20 @@ func StartServer() {
 	router.GET("/ws", func(c *gin.Context) {
 		conn, _, _, err := ws.UpgradeHTTP(c.Request, c.Writer)
 		if err != nil {
+			logrus.Error(err)
 			return
 		}
 
-		conn.SetDeadline(time.Now().Add(timeout))
+		conn.SetDeadline(time.Now().Add(config.WebsocketDeadline()))
 		if err := epollerService.Add(conn); err != nil {
-			log.Printf("failed to add connection %v", err)
-			conn.Close()
+			logrus.Error(err)
+			_ = conn.Close()
 		}
 	})
 
-	if err := router.Run("0.0.0.0:8000"); err != nil {
-		log.Fatal(err)
+	err = router.Run(fmt.Sprintf("0.0.0.0:%s", config.ServerPort()))
+	if err != nil {
+		logrus.Fatal(err)
 	}
 
 }
@@ -65,20 +64,20 @@ func Start(epollerService contract.EpollerService, websocketService contract.Web
 			messageData, opCode, err := wsutil.ReadClientData(conn)
 			if err != nil {
 				if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
-					log.Printf("read timeout for connection %v", conn)
+					logrus.Error(err)
 				} else {
-					log.Printf("read error for connection %v: %v", conn, err)
+					logrus.Error(err)
 				}
 				if err := epollerService.Remove(conn); err != nil {
-					log.Printf("failed to remove %v", err)
+					logrus.Error(err)
 				}
-				conn.Close()
+				_ = conn.Close()
 				continue
 			}
 
 			err = websocketService.HandleIncomingMessage(conn, messageData, opCode)
 			if err != nil {
-				log.Printf("failed to handle in coming message %v", err)
+				logrus.Error(err)
 			}
 		}
 	}

@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 	"net"
-	"time"
 
 	"github.com/gobwas/ws"
 	"github.com/gobwas/ws/wsutil"
+	"github.com/krobus00/websocket-service/internal/config"
 )
 
 func (s *Service) HandleIncomingMessage(conn net.Conn, messageData []byte, operationCode ws.OpCode) error {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), config.WebsocketDeadline())
 	defer cancel()
 
 	processDone := make(chan error)
@@ -24,7 +24,7 @@ func (s *Service) HandleIncomingMessage(conn net.Conn, messageData []byte, opera
 
 	select {
 	case <-ctx.Done():
-		conn.Close()
+		_ = conn.Close()
 		return errors.New("timeout")
 	case err := <-processDone:
 		return err

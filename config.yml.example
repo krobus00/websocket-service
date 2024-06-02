@@ -1,0 +1,6 @@
+environtment: dev # dev/stg/prod
+log_level: info # panic/fatal/error/warn/info/debug/trace
+server:
+  port: 8117
+websocket:
+  deadline: "5s"

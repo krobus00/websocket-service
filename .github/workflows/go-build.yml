@@ -1,20 +1,17 @@
-name: Go Build
+name: Main Workflow
 
 on:
   push:
     branches:
       - master
   pull_request:
-    branches:
-      - master
 
 jobs:
   build:
-    uses: krobus00/websocket-service/.github/workflows/presetup.yml@master
-
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Setup Go Environment
+        uses: krobus00/websocket-service/.github/workflows/presetup.yml@master
 
-    - name: Build the application
-      run: go build -o myapp
+      - name: Build app
+        run: go build .

@@ -10,7 +10,7 @@ on:
 
 jobs:
   build:
-    uses: krobus00/websocket-service/.github/workflows/build-template.yml@master
+    uses: krobus00/websocket-service/.github/workflows/presetup.yml@master
 
   build-application:
     runs-on: ubuntu-latest

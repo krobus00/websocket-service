@@ -1,4 +1,4 @@
-name: Go Build Template
+name: Presetup
 
 on:
   workflow_call:
@@ -17,4 +17,4 @@ jobs:
         go-version: '1.21'
 
     - name: Install dependencies
-      run: go mod download
+      run: go mod tidy
